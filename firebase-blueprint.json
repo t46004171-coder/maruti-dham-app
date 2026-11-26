@@ -1,0 +1,340 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Registered customer or owner profile with verified mobile number, fulfillment preference, and IST signup metadata.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID" },
+        "displayName": { "type": "string", "description": "Customer or owner full name" },
+        "email": { "type": "string", "description": "Optional/Google email address" },
+        "phone": { "type": "string", "description": "Mandatory customer mobile number" },
+        "preferredLanguage": { "type": "string", "enum": ["en", "hi"], "description": "UI language preference" },
+        "registrationCompleted": { "type": "boolean", "description": "True once mandatory mobile registration is saved" },
+        "preferredFulfillment": { "type": "string", "enum": ["PICKUP", "DELIVERY"], "description": "Default pickup or delivery preference" },
+        "defaultAddress": { "type": "string", "description": "Optional default delivery address" },
+        "defaultLocality": { "type": "string", "description": "Optional default Khatu Shyam Ji locality" },
+        "consentAccepted": { "type": "boolean", "description": "Whether privacy policy & data consent was accepted" },
+        "deletionRequested": { "type": "boolean", "description": "Whether customer requested account/data deletion" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Signup server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last profile update timestamp" }
+      },
+      "required": ["userId", "displayName", "preferredLanguage", "registrationCompleted", "preferredFulfillment", "createdAt", "updatedAt"]
+    },
+    "PhoneRegistry": {
+      "title": "PhoneRegistry",
+      "description": "Unique mobile number index preventing duplicate customer accounts.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID owning this normalized mobile number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "createdAt"]
+    },
+    "OrderCounter": {
+      "title": "OrderCounter",
+      "description": "Atomic sequential order counter generating MD-000001 style order numbers.",
+      "type": "object",
+      "properties": {
+        "lastNumber": { "type": "integer", "description": "Last allocated sequential order number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["lastNumber", "updatedAt"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized shop owner/admin UID record.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID of admin" },
+        "email": { "type": "string", "description": "Admin email address" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "ShopSettings": {
+      "title": "ShopSettings",
+      "description": "MARUTI DHAM shop open/closed control mode, timings, WhatsApp, UPI, and business details.",
+      "type": "object",
+      "properties": {
+        "shopName": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "address": { "type": "string" },
+        "mapsQuery": { "type": "string" },
+        "shopOpen": { "type": "boolean" },
+        "shopControlMode": { "type": "string", "enum": ["OPEN_NOW", "CLOSED_NOW", "OPEN_AT_SCHEDULED", "CLOSE_AT_SCHEDULED"] },
+        "openingTime": { "type": "string" },
+        "closingTime": { "type": "string" },
+        "whatsappNumber": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "upiId": { "type": "string" },
+        "cashEnabled": { "type": "boolean" },
+        "upiEnabled": { "type": "boolean" },
+        "whatsappWebhookUrl": { "type": "string" },
+        "aboutText": { "type": "string" },
+        "privacyPolicy": { "type": "string" },
+        "termsText": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["shopName", "ownerName", "address", "mapsQuery", "shopOpen", "shopControlMode", "openingTime", "closingTime", "whatsappNumber", "contactPhone", "contactEmail", "upiId", "cashEnabled", "upiEnabled", "whatsappWebhookUrl", "aboutText", "privacyPolicy", "termsText", "updatedAt"]
+    },
+    "SiteConfig": {
+      "title": "SiteConfig",
+      "description": "Owner-editable storefront branding, logo, banner, categories, section visibility, and draft/published themes.",
+      "type": "object",
+      "properties": {
+        "logoUrl": { "type": "string" },
+        "heroBannerUrl": { "type": "string" },
+        "showAnnouncementsSection": { "type": "boolean" },
+        "showDailySpecialsSection": { "type": "boolean" },
+        "showRoomsSection": { "type": "boolean" },
+        "showDeliverySection": { "type": "boolean" },
+        "categories": { "type": "array" },
+        "draftTheme": { "type": "object" },
+        "publishedTheme": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["showAnnouncementsSection", "showDailySpecialsSection", "showRoomsSection", "showDeliverySection", "categories", "draftTheme", "publishedTheme", "updatedAt"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Daily special items and devotional announcements managed by the owner.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "active": { "type": "boolean" },
+        "dailySpecial": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "message", "active", "dailySpecial", "createdAt", "updatedAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Food menu item with multi-price options, stock quantity, availability, visibility, and photo.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "nameHindi": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "priceOptions": { "type": "array", "description": "List of {label, price} options" },
+        "imageUrl": { "type": "string" },
+        "localImageKey": { "type": "string" },
+        "available": { "type": "boolean" },
+        "visible": { "type": "boolean" },
+        "foodOrderEnabled": { "type": "boolean" },
+        "deliveryEnabled": { "type": "boolean" },
+        "stockQuantity": { "type": "integer" },
+        "trackStock": { "type": "boolean" },
+        "sortOrder": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "nameHindi", "category", "priceOptions", "imageUrl", "localImageKey", "available", "visible", "foodOrderEnabled", "deliveryEnabled", "stockQuantity", "trackStock", "sortOrder", "createdAt", "updatedAt"]
+    },
+    "RoomConfig": {
+      "title": "RoomConfig",
+      "description": "AC or Non-AC room availability, status, photo, and duration rates.",
+      "type": "object",
+      "properties": {
+        "roomType": { "type": "string", "enum": ["AC", "NON_AC"] },
+        "title": { "type": "string" },
+        "titleHindi": { "type": "string" },
+        "available": { "type": "boolean" },
+        "statusLabel": { "type": "string", "enum": ["AVAILABLE", "FULLY_BOOKED", "CLOSED"] },
+        "availableCount": { "type": "integer" },
+        "imageUrl": { "type": "string" },
+        "rate6Hours": { "type": "integer" },
+        "rate12Hours": { "type": "integer" },
+        "rate1Hour": { "type": "integer" },
+        "rate2Hours": { "type": "integer" },
+        "rate3Hours": { "type": "integer" },
+        "rate4Hours": { "type": "integer" },
+        "rate5Hours": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["roomType", "title", "titleHindi", "available", "statusLabel", "availableCount", "imageUrl", "rate6Hours", "rate12Hours", "updatedAt"]
+    },
+    "FreshenUpConfig": {
+      "title": "FreshenUpConfig",
+      "description": "Standalone freshen-up service tier and per-person pricing.",
+      "type": "object",
+      "properties": {
+        "optionKey": { "type": "string", "enum": ["ONLY_FRESH", "BATH_FRESH"] },
+        "title": { "type": "string" },
+        "titleHindi": { "type": "string" },
+        "pricePerPerson": { "type": "integer" },
+        "available": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["optionKey", "title", "titleHindi", "pricePerPerson", "available", "updatedAt"]
+    },
+    "DeliverySettings": {
+      "title": "DeliverySettings",
+      "description": "Khatu Shyam Ji local delivery availability, pickup availability, charges, and configured service area.",
+      "type": "object",
+      "properties": {
+        "deliveryEnabled": { "type": "boolean" },
+        "pickupEnabled": { "type": "boolean" },
+        "deliveryCharge": { "type": "integer" },
+        "packagingCharge": { "type": "integer" },
+        "serviceAreaName": { "type": "string" },
+        "allowedLocalities": { "type": "array" },
+        "minimumOrderAmount": { "type": "integer" },
+        "deliveryNote": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["deliveryEnabled", "pickupEnabled", "deliveryCharge", "packagingCharge", "serviceAreaName", "allowedLocalities", "minimumOrderAmount", "deliveryNote", "updatedAt"]
+    },
+    "CustomerRequest": {
+      "title": "CustomerRequest",
+      "description": "Customer Food, Room, Freshen Up, or Food Delivery order/request with bill receipt, payment, and WhatsApp tracking.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "category": { "type": "string", "enum": ["FOOD_REQUEST", "ROOM_REQUEST", "FRESHEN_UP_REQUEST", "FOOD_DELIVERY_REQUEST"] },
+        "customerName": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "items": { "type": "array" },
+        "foodTotal": { "type": "integer" },
+        "roomTotal": { "type": "integer" },
+        "freshenUpTotal": { "type": "integer" },
+        "deliveryCharge": { "type": "integer" },
+        "packagingCharge": { "type": "integer" },
+        "grandTotal": { "type": "integer" },
+        "expectedTime": { "type": "string" },
+        "fulfillmentType": { "type": "string", "enum": ["PICKUP", "DELIVERY"] },
+        "paymentMethod": { "type": "string", "enum": ["CASH", "UPI"] },
+        "paymentStatus": { "type": "string", "enum": ["UNPAID", "UPI_PENDING_VERIFICATION", "PAID", "REFUNDED"] },
+        "upiTransactionRef": { "type": "string" },
+        "whatsappStatus": { "type": "string", "enum": ["PENDING_SERVER", "SENT", "FAILED", "MANUAL_SHARED", "NOT_CONFIGURED"] },
+        "whatsappError": { "type": "string" },
+        "whatsappRetryCount": { "type": "integer" },
+        "roomType": { "type": "string" },
+        "numberOfRooms": { "type": "integer" },
+        "numberOfPeople": { "type": "integer" },
+        "roomDurationHours": { "type": "integer" },
+        "roomRateConfigured": { "type": "boolean" },
+        "freshenUpOption": { "type": "string" },
+        "deliveryAddress": { "type": "string" },
+        "deliveryLocality": { "type": "string" },
+        "notes": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "CONFIRMED", "PREPARING", "READY", "COMPLETED", "REJECTED"] },
+        "adminNote": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "orderNumber", "category", "customerName", "contactPhone", "items", "foodTotal", "roomTotal", "freshenUpTotal", "grandTotal", "expectedTime", "fulfillmentType", "paymentMethod", "paymentStatus", "whatsappStatus", "whatsappRetryCount", "status", "createdAt", "updatedAt"]
+    },
+    "OwnerPrivateSettings": {
+      "title": "OwnerPrivateSettings",
+      "description": "Private owner-only WhatsApp notification target and Cloud Function webhook endpoint.",
+      "type": "object",
+      "properties": {
+        "ownerWhatsAppNumber": { "type": "string" },
+        "whatsappWebhookUrl": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerWhatsAppNumber", "whatsappWebhookUrl", "updatedAt"]
+    },
+    "ActivityLogEntry": {
+      "title": "ActivityLogEntry",
+      "description": "Immutable owner & MARUTI AI admin audit log entry.",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string" },
+        "targetType": { "type": "string" },
+        "targetId": { "type": "string" },
+        "previousValue": { "type": "string" },
+        "newValue": { "type": "string" },
+        "performedByEmail": { "type": "string" },
+        "performedByUid": { "type": "string" },
+        "viaAi": { "type": "boolean" },
+        "istTimestampText": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["action", "targetType", "targetId", "previousValue", "newValue", "performedByEmail", "performedByUid", "viaAi", "istTimestampText", "createdAt"]
+    },
+    "OwnerNotification": {
+      "title": "OwnerNotification",
+      "description": "Server-generated new order notification alert for the Owner Admin dashboard.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "requestId": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "message", "orderNumber", "requestId", "read", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile, registration, and language preference scoped by Auth UID."
+    },
+    "/phone_registry/{phoneKey}": {
+      "schema": { "$ref": "#/entities/PhoneRegistry" },
+      "description": "Unique mobile number index preventing duplicate accounts."
+    },
+    "/counters/{counterId}": {
+      "schema": { "$ref": "#/entities/OrderCounter" },
+      "description": "Atomic sequential order ID counter."
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Admin role documents checked by security rules."
+    },
+    "/shop_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/ShopSettings" },
+      "description": "Public storefront open/closed control, timings, payment toggles, address, and business details."
+    },
+    "/site_config/{configId}": {
+      "schema": { "$ref": "#/entities/SiteConfig" },
+      "description": "Storefront branding, editable categories, visibility flags, and draft/published themes."
+    },
+    "/owner_private_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/OwnerPrivateSettings" },
+      "description": "Owner-only private WhatsApp number and webhook configuration."
+    },
+    "/announcements/{announcementId}": {
+      "schema": { "$ref": "#/entities/Announcement" },
+      "description": "Owner-managed daily specials and announcements."
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Food menu catalog and stock managed by owner."
+    },
+    "/room_configs/{roomTypeId}": {
+      "schema": { "$ref": "#/entities/RoomConfig" },
+      "description": "AC and Non-AC room rates and availability."
+    },
+    "/freshen_up_configs/{optionId}": {
+      "schema": { "$ref": "#/entities/FreshenUpConfig" },
+      "description": "Only Fresh and Bath + Fresh pricing and availability."
+    },
+    "/delivery_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/DeliverySettings" },
+      "description": "Khatu Shyam Ji delivery, pickup, charges, and area settings."
+    },
+    "/requests/{requestId}": {
+      "schema": { "$ref": "#/entities/CustomerRequest" },
+      "description": "Customer Food, Room, Freshen Up, and Food Delivery orders & requests."
+    },
+    "/activity_logs/{logId}": {
+      "schema": { "$ref": "#/entities/ActivityLogEntry" },
+      "description": "Immutable owner and MARUTI AI change audit log."
+    },
+    "/notifications/{notifId}": {
+      "schema": { "$ref": "#/entities/OwnerNotification" },
+      "description": "Owner-only unread order notification alerts."
+    }
+  }
+}

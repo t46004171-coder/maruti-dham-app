@@ -1,0 +1,6 @@
+{
+  "name": "Maruti Dham",
+  "description": "Devotional shop app for MARUTI DHAM near Manda Chauraha, Khatu Shyam Ji, offering food ordering, AC/Non-AC room requests, freshen-up services, local food delivery, WhatsApp sharing, and owner administration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0A1633" />
+  <meta name="description" content="MARUTI DHAM — Near Manda Chauraha, Khatu Shyam Ji, Sikar, Rajasthan. Food Order, Rooms & Freshen Up, and Local Food Delivery." />
+  <title>MARUTI DHAM — Khatu Shyam Ji</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <!-- Top Devotional Header -->
+    <header class="top-header">
+      <div class="header-inner">
+        <div class="brand-lockup">
+          <div id="brand-crest" class="brand-crest" aria-hidden="true">ॐ</div>
+          <img id="brand-logo-img" class="brand-logo-img hidden" alt="MARUTI DHAM Logo" />
+          <div>
+            <p class="devotional-invocation" data-i18n="shyamBanner">जय श्री श्याम • हारे का सहारा</p>
+            <h1 class="brand-title">MARUTI DHAM</h1>
+            <p class="brand-subtitle" data-i18n="locationShort">Near Manda Chauraha, Khatu Shyam Ji</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <span id="shop-status-badge" class="status-pill status-open">OPEN</span>
+          <span id="theme-preview-pill" class="status-pill status-open hidden">LIVE PREVIEW</span>
+          <button id="lang-toggle-btn" class="btn-outline-gold" type="button" aria-label="Switch Language">हिंदी / EN</button>
+          <button id="auth-btn" class="btn-gold" type="button">Login Portal</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Two-Option Login Portal Card (Visible when signed out or switching roles) -->
+    <section id="login-portal-card" class="card login-portal-card">
+      <div id="login-selector-view">
+        <span class="badge-gold">JAI SHRI SHYAM • MARUTI DHAM</span>
+        <h2 data-i18n="chooseLoginTitle">Select Login Type</h2>
+        <p class="muted" data-i18n="chooseLoginDesc">Choose Customer Login to order food &amp; rooms, or Owner Login for business management.</p>
+        <div class="portal-options-grid">
+          <button id="choose-customer-login-btn" class="portal-option-tile" type="button">
+            <span class="tile-title" data-i18n="customerLoginOption">1. Customer Login</span>
+            <span class="tile-sub" data-i18n="customerLoginSub">Browse menu, place food &amp; delivery orders, book rooms, and view your receipts.</span>
+          </button>
+          <button id="choose-owner-login-btn" class="portal-option-tile portal-owner-tile" type="button">
+            <span class="tile-title" data-i18n="ownerLoginOption">2. Owner / Admin Login</span>
+            <span class="tile-sub" data-i18n="ownerLoginSub">Restricted to authorized shop owner only. Manage orders, menu, reports &amp; theme.</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="login-customer-view" class="hidden">
+        <button id="back-from-customer-btn" class="btn-outline-gold" type="button">← Back to Login Options</button>
+        <h3 style="margin-top:14px;" data-i18n="customerLoginOption">Customer Login</h3>
+        <p class="muted">Sign in securely with Google to place orders, request rooms, and track your personal receipts.</p>
+        <button id="customer-google-signin-btn" class="btn-gold" type="button">Sign in with Google (Customer)</button>
+      </div>
+
+      <div id="login-owner-view" class="hidden">
+        <button id="back-from-owner-btn" class="btn-outline-gold" type="button">← Back to Login Options</button>
+        <h3 style="margin-top:14px;" data-i18n="ownerLoginOption">Owner / Admin Login</h3>
+        <p class="muted">Authorized shop owner Google account verification required. Unauthorized accounts are automatically denied and signed out.</p>
+        <div id="owner-denied-banner" class="closed-banner hidden" role="alert" style="margin: 10px 0;"></div>
+        <button id="owner-google-signin-btn" class="btn-gold" type="button">Verify Owner with Google</button>
+      </div>
+    </section>
+
+    <!-- Closed Shop Alert Banner -->
+    <div id="shop-closed-banner" class="closed-banner hidden" role="alert">
+      <strong>SHOP CLOSED:</strong> <span id="shop-closed-reason"></span>
+    </div>
+
+    <!-- Registration Gate Modal -->
+    <section id="registration-card" class="card registration-card hidden" aria-label="Customer Registration">
+      <h2 data-i18n="completeProfileTitle">Complete Customer Profile</h2>
+      <p class="muted" data-i18n="completeProfileDesc">Enter your name and 10-digit Indian mobile number to place orders.</p>
+      <form id="registration-form" class="form-grid">
+        <label>
+          <span data-i18n="fullName">Full Name</span>
+          <input id="reg-name" type="text" required minlength="2" maxlength="80" placeholder="e.g., Ramesh Sharma" />
+        </label>
+        <label>
+          <span data-i18n="mobileNumber">Mobile Number (10 digits)</span>
+          <input id="reg-phone" type="tel" required pattern="[0-9+\s]{10,15}" placeholder="e.g., 9876543210" />
+        </label>
+        <label>
+          <span data-i18n="defaultLocality">Default Area in Khatu Shyam Ji</span>
+          <select id="reg-locality"></select>
+        </label>
+        <label>
+          <span data-i18n="defaultAddress">Default Address (Optional)</span>
+          <input id="reg-address" type="text" maxlength="300" placeholder="Dharamshala / Gali / Landmark" />
+        </label>
+        <div class="consent-row">
+          <input id="reg-consent" type="checkbox" checked required />
+          <label for="reg-consent" data-i18n="consentLabel">I agree to the MARUTI DHAM Privacy Policy for order fulfillment.</label>
+        </div>
+        <button class="btn-gold" type="submit" data-i18n="saveProfile">Save &amp; Continue</button>
+      </form>
+    </section>
+
+    <!-- Main Dynamic Content -->
+    <main id="main-content" class="main-content">
+      <!-- Tab 1: Home -->
+      <section id="tab-home" class="tab-panel active" aria-labelledby="nav-home">
+        <div id="hero-card" class="hero-card">
+          <img id="hero-banner-img" class="hero-banner-img hidden" alt="MARUTI DHAM Banner" />
+          <div class="hero-overlay">
+            <span class="badge-gold">OWNER: TARUN KUMAR</span>
+            <h2>MARUTI DHAM</h2>
+            <p id="home-about-text" class="hero-desc"></p>
+            <div class="hero-meta">
+              <div class="meta-chip">
+                <strong data-i18n="timingsLabel">Timings (IST)</strong>
+                <span id="home-timings">7:00 AM – 10:00 PM</span>
+              </div>
+              <div class="meta-chip">
+                <strong data-i18n="statusLabel">Shop Status</strong>
+                <span id="home-open-detail">Open Now</span>
+              </div>
+            </div>
+            <div class="hero-buttons">
+              <a id="maps-link" class="btn-gold" target="_blank" rel="noopener noreferrer" href="#">Google Maps Directions</a>
+              <button class="btn-outline-gold" type="button" data-jump-tab="food">Order Food</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="home-announcements-wrapper">
+          <div class="section-header">
+            <h3 data-i18n="specialsTitle">Daily Specials &amp; Announcements</h3>
+          </div>
+          <div id="announcements-list" class="card-grid"></div>
+        </div>
+
+        <div class="section-header">
+          <h3 data-i18n="servicesTitle">Available Services</h3>
+        </div>
+        <div class="services-grid">
+          <button class="service-tile" type="button" data-jump-tab="food">
+            <span class="tile-title">Fresh Tea &amp; Stall Food</span>
+            <span class="tile-sub">Desi Tea, Poha, Maggi, Chole Kulche &amp; Pickup</span>
+          </button>
+          <button id="home-rooms-tile" class="service-tile" type="button" data-jump-tab="rooms">
+            <span class="tile-title">Rooms &amp; Freshen Up</span>
+            <span class="tile-sub">AC / Non-AC Rest Rooms &amp; Only Fresh / Bath</span>
+          </button>
+          <button id="home-delivery-tile" class="service-tile" type="button" data-jump-tab="delivery">
+            <span class="tile-title">Khatu Shyam Ji Delivery</span>
+            <span class="tile-sub">Local Dharamshala &amp; Temple Area Delivery</span>
+          </button>
+        </div>
+
+        <div class="card address-card">
+          <h3 data-i18n="addressTitle">Shop Address</h3>
+          <p id="home-address">Near Manda Chauraha, Khatu Shyam Ji, Sikar, Rajasthan, India</p>
+        </div>
+      </section>
+
+      <!-- Tab 2: Food Order -->
+      <section id="tab-food" class="tab-panel" aria-labelledby="nav-food">
+        <div class="section-header">
+          <h2 data-i18n="foodMenuTitle">Food Menu &amp; Counter Pickup</h2>
+          <p id="pickup-availability-note" class="muted"></p>
+        </div>
+        <div id="food-categories" class="chip-row" role="tablist"></div>
+        <div id="food-menu-grid" class="menu-grid"></div>
+
+        <div id="pickup-checkout-card" class="card checkout-card">
+          <h3>Counter Pickup Order Summary</h3>
+          <div id="pickup-order-success" class="order-success-banner hidden" role="status" aria-live="polite">
+            <svg class="success-check-svg" viewBox="0 0 36 36" aria-hidden="true">
+              <circle class="success-check-circle" cx="18" cy="18" r="15" />
+              <path class="success-check-path" d="M11 18.5l4.8 4.8L25.5 13.5" />
+            </svg>
+            <div class="order-success-copy">
+              <strong>Order Confirmed!</strong>
+              <span class="success-order-meta">Order <span class="success-order-id"></span> • Preparing receipt...</span>
+            </div>
+          </div>
+          <div id="pickup-cart-items" class="cart-lines"></div>
+          <div class="bill-breakdown">
+            <div><span>Subtotal</span><strong id="pickup-subtotal">₹0</strong></div>
+            <div><span>Packaging Charge</span><strong id="pickup-pkg">₹0</strong></div>
+            <div class="grand-line"><span>Grand Total</span><strong id="pickup-grand">₹0</strong></div>
+          </div>
+          <form id="pickup-order-form" class="form-grid">
+            <label>
+              <span>Expected Arrival Time (e.g., 10:30 AM)</span>
+              <input id="pickup-time" type="text" required value="In 20 mins" maxlength="60" />
+            </label>
+            <div id="pickup-cash-only-badge" class="badge-gold">Payment Mode: Cash Only at Stall Counter</div>
+            <label id="pickup-payment-wrap" class="hidden">
+              <span>Payment Method</span>
+              <select id="pickup-payment">
+                <option value="CASH">Cash at Stall</option>
+                <option value="UPI">UPI Payment</option>
+              </select>
+            </label>
+            <label id="pickup-upi-ref-wrap" class="hidden">
+              <span>UPI Transaction / UTR Reference</span>
+              <input id="pickup-upi-ref" type="text" maxlength="80" placeholder="Enter 12-digit UTR after paying" />
+            </label>
+            <label>
+              <span>Special Notes (Optional)</span>
+              <input id="pickup-notes" type="text" maxlength="300" placeholder="Less sugar, extra masala..." />
+            </label>
+            <button id="pickup-submit-btn" class="btn-gold" type="submit">Place Food Order</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Tab 3: Rooms & Freshen Up -->
+      <section id="tab-rooms" class="tab-panel" aria-labelledby="nav-rooms">
+        <div class="section-header">
+          <h2>Rooms &amp; Freshen Up</h2>
+          <p class="muted">Select an AC/Non-AC room or continue without a room for standalone Freshen Up.</p>
+        </div>
+        <div id="room-cards-grid" class="card-grid"></div>
+
+        <div id="rf-checkout-card" class="card checkout-card">
+          <h3>Book Room or Freshen Up</h3>
+          <div id="rf-order-success" class="order-success-banner hidden" role="status" aria-live="polite">
+            <svg class="success-check-svg" viewBox="0 0 36 36" aria-hidden="true">
+              <circle class="success-check-circle" cx="18" cy="18" r="15" />
+              <path class="success-check-path" d="M11 18.5l4.8 4.8L25.5 13.5" />
+            </svg>
+            <div class="order-success-copy">
+              <strong>Request Confirmed!</strong>
+              <span class="success-order-meta">Booking <span class="success-order-id"></span> • Preparing receipt...</span>
+            </div>
+          </div>
+          <form id="room-freshen-form" class="form-grid">
+            <label>
+              <span>Request Type</span>
+              <select id="rf-mode">
+                <option value="ROOM">Room Booking</option>
+                <option value="FRESHEN">Standalone Freshen Up (Without Room)</option>
+              </select>
+            </label>
+            <div id="rf-room-fields" class="form-grid">
+              <label>
+                <span>Room Type</span>
+                <select id="rf-room-type">
+                  <option value="AC">AC Room</option>
+                  <option value="NON_AC">Non-AC Room</option>
+                </select>
+              </label>
+              <label>
+                <span>Duration (Hours)</span>
+                <select id="rf-duration">
+                  <option value="6">6 Hours</option>
+                  <option value="12">12 Hours</option>
+                  <option value="1">1 Hour</option>
+                  <option value="2">2 Hours</option>
+                  <option value="3">3 Hours</option>
+                  <option value="4">4 Hours</option>
+                  <option value="5">5 Hours</option>
+                </select>
+              </label>
+              <label>
+                <span>Number of Rooms</span>
+                <input id="rf-room-count" type="number" min="1" max="10" value="1" />
+              </label>
+            </div>
+            <div id="rf-freshen-fields" class="form-grid hidden">
+              <label>
+                <span>Freshen Up Option</span>
+                <select id="rf-freshen-opt">
+                  <option value="ONLY_FRESH">Only Fresh (₹50 / person)</option>
+                  <option value="BATH_FRESH">Bath + Fresh (₹100 / person)</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              <span>Number of Guests / People</span>
+              <input id="rf-people" type="number" min="1" max="50" value="2" />
+            </label>
+            <label>
+              <span>Expected Check-in Time</span>
+              <input id="rf-time" type="text" required value="08:00 AM" maxlength="60" />
+            </label>
+            <div class="bill-breakdown">
+              <div class="grand-line"><span>Estimated Total (Cash at Counter)</span><strong id="rf-total">₹1200</strong></div>
+            </div>
+            <button id="rf-submit-btn" class="btn-gold" type="submit">Submit Booking Request</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Tab 4: Food Delivery -->
+      <section id="tab-delivery" class="tab-panel" aria-labelledby="nav-delivery">
+        <div class="section-header">
+          <h2>Local Food Delivery</h2>
+          <p id="delivery-area-note" class="muted">Delivering strictly within Khatu Shyam Ji.</p>
+        </div>
+        <div id="delivery-menu-grid" class="menu-grid"></div>
+        <div id="delivery-checkout-card" class="card checkout-card">
+          <h3>Delivery Order Summary</h3>
+          <div id="delivery-order-success" class="order-success-banner hidden" role="status" aria-live="polite">
+            <svg class="success-check-svg" viewBox="0 0 36 36" aria-hidden="true">
+              <circle class="success-check-circle" cx="18" cy="18" r="15" />
+              <path class="success-check-path" d="M11 18.5l4.8 4.8L25.5 13.5" />
+            </svg>
+            <div class="order-success-copy">
+              <strong>Delivery Order Confirmed!</strong>
+              <span class="success-order-meta">Order <span class="success-order-id"></span> • Preparing receipt...</span>
+            </div>
+          </div>
+          <div id="delivery-cart-items" class="cart-lines"></div>
+          <div class="bill-breakdown">
+            <div><span>Food Subtotal</span><strong id="deliv-subtotal">₹0</strong></div>
+            <div><span>Delivery Charge</span><strong id="deliv-charge">₹0</strong></div>
+            <div><span>Packaging Charge</span><strong id="deliv-pkg">₹0</strong></div>
+            <div class="grand-line"><span>Grand Total</span><strong id="deliv-grand">₹0</strong></div>
+          </div>
+          <form id="delivery-order-form" class="form-grid">
+            <label>
+              <span>Khatu Shyam Ji Locality</span>
+              <select id="deliv-locality"></select>
+            </label>
+            <label>
+              <span>Complete Dharamshala / Landmark Address</span>
+              <input id="deliv-address" type="text" required minlength="4" maxlength="300" placeholder="Room/Gali/Dharamshala in Khatu Shyam Ji" />
+            </label>
+            <label>
+              <span>Preferred Delivery Time</span>
+              <input id="deliv-time" type="text" required value="ASAP (30 mins)" maxlength="60" />
+            </label>
+            <div id="deliv-cash-only-badge" class="badge-gold">Payment Mode: Cash on Delivery Only</div>
+            <label id="deliv-payment-wrap" class="hidden">
+              <span>Payment Method</span>
+              <select id="deliv-payment">
+                <option value="CASH">Cash on Delivery</option>
+                <option value="UPI">UPI Payment</option>
+              </select>
+            </label>
+            <label id="deliv-upi-ref-wrap" class="hidden">
+              <span>UPI UTR Reference</span>
+              <input id="deliv-upi-ref" type="text" maxlength="80" placeholder="Enter 12-digit UTR" />
+            </label>
+            <button id="deliv-submit-btn" class="btn-gold" type="submit">Place Delivery Order</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Tab 5: Settings (+ My Requests + Verified Owner Admin) -->
+      <section id="tab-settings" class="tab-panel" aria-labelledby="nav-settings">
+        <div class="section-header">
+          <h2>Settings &amp; Order History</h2>
+        </div>
+
+        <div class="card">
+          <h3>My Orders &amp; Requests</h3>
+          <p class="muted">Tap any order to view or print its itemized digital receipt.</p>
+          <div id="my-requests-list" class="request-list"></div>
+        </div>
+
+        <div class="card">
+          <h3>Storefront &amp; Privacy</h3>
+          <p id="settings-storefront-contact" class="muted">Orders and receipts are managed directly at MARUTI DHAM, Manda Chauraha.</p>
+          <details class="policy-details">
+            <summary>Privacy Policy &amp; Terms</summary>
+            <p id="settings-privacy-text"></p>
+            <p id="settings-terms-text"></p>
+          </details>
+          <div class="inline-actions" style="margin-top: 12px;">
+            <button id="request-deletion-btn" class="btn-outline-danger hidden" type="button">Request Account Deletion</button>
+            <button id="settings-signout-btn" class="btn-outline-danger hidden" type="button">Sign Out</button>
+          </div>
+        </div>
+
+        <!-- Strictly hidden & disabled unless verified owner -->
+        <div id="owner-admin-section" class="card admin-panel hidden">
+          <div class="admin-header">
+            <div>
+              <span class="badge-gold">OWNER VERIFIED</span>
+              <h3>MARUTI DHAM Owner Admin Dashboard</h3>
+            </div>
+            <div class="inline-actions">
+              <button id="admin-new-orders-pill" class="live-orders-badge hidden" type="button" title="Jump to new pending orders">
+                <span class="live-dot" aria-hidden="true"></span>
+                <span id="admin-new-orders-text">0 Pending</span>
+              </button>
+              <button id="admin-low-stock-pill" class="low-stock-badge hidden" type="button" title="Jump to flagged low-stock menu items">
+                <span id="admin-low-stock-text">0 Low Stock</span>
+              </button>
+              <span id="admin-unread-pill" class="status-pill status-closed">0 Alerts</span>
+              <button id="admin-signout-btn" class="btn-outline-danger" type="button">Owner Logout</button>
+            </div>
+          </div>
+
+          <div id="admin-subnav" class="chip-row">
+            <button type="button" class="cat-chip active" data-adm-tab="overview">Overview</button>
+            <button type="button" class="cat-chip" data-adm-tab="shop-orders">Shop Orders <span id="adm-badge-shop" class="tab-count-badge hidden">0</span></button>
+            <button type="button" class="cat-chip" data-adm-tab="delivery-orders">Delivery Orders <span id="adm-badge-delivery" class="tab-count-badge hidden">0</span></button>
+            <button type="button" class="cat-chip" data-adm-tab="rooms-freshen">Rooms &amp; Freshen <span id="adm-badge-rooms" class="tab-count-badge hidden">0</span></button>
+            <button type="button" class="cat-chip" data-adm-tab="customers">Customers</button>
+            <button type="button" class="cat-chip" data-adm-tab="reports">Sales Reports</button>
+            <button type="button" class="cat-chip" data-adm-tab="menu">Menu &amp; Stock <span id="adm-badge-stock" class="tab-count-badge hidden">0</span></button>
+            <button type="button" class="cat-chip" data-adm-tab="payment-shop">Payment &amp; Shop</button>
+            <button type="button" class="cat-chip" data-adm-tab="design">Design Studio</button>
+            <button type="button" class="cat-chip" data-adm-tab="security">Logs &amp; Security</button>
+          </div>
+
+          <div id="adm-panel-overview" class="adm-panel">
+            <div class="kpi-grid" id="admin-kpis"></div>
+            <div id="admin-low-stock-watchlist" class="card watchlist-card"></div>
+          </div>
+
+          <div id="adm-panel-shop-orders" class="adm-panel hidden">
+            <h4>Shop &amp; Counter Orders (FOOD_REQUEST)</h4>
+            <div class="inline-actions" style="margin-bottom:10px;">
+              <input id="adm-shop-order-search" type="search" aria-label="Filter shop orders by customer name or mobile number" placeholder="Search by customer name, mobile number, or order ID..." style="flex:1;min-width:200px;" />
+              <select id="adm-shop-order-status" aria-label="Filter shop orders by status">
+                <option value="ALL">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="PREPARING">Preparing</option>
+                <option value="READY">Ready</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="REJECTED">Cancelled</option>
+              </select>
+              <button id="adm-shop-order-clear" class="btn-outline-gold hidden" type="button">Clear</button>
+            </div>
+            <div id="admin-shop-orders-list" class="request-list"></div>
+          </div>
+
+          <div id="adm-panel-delivery-orders" class="adm-panel hidden">
+            <h4>Khatu Shyam Ji Delivery Orders (FOOD_DELIVERY_REQUEST)</h4>
+            <div class="inline-actions" style="margin-bottom:10px;">
+              <input id="adm-deliv-order-search" type="search" aria-label="Filter delivery orders by customer name or mobile number" placeholder="Search by customer name, mobile number, order ID, or address..." style="flex:1;min-width:200px;" />
+              <select id="adm-deliv-order-status" aria-label="Filter delivery orders by status">
+                <option value="ALL">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="PREPARING">Preparing</option>
+                <option value="READY">Ready</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="REJECTED">Cancelled</option>
+              </select>
+              <button id="adm-deliv-order-clear" class="btn-outline-gold hidden" type="button">Clear</button>
+            </div>
+            <div id="admin-delivery-orders-list" class="request-list"></div>
+          </div>
+
+          <div id="adm-panel-rooms-freshen" class="adm-panel hidden">
+            <h4>Room Bookings &amp; Freshen-Up Requests</h4>
+            <div id="admin-rooms-freshen-list" class="request-list"></div>
+          </div>
+
+          <div id="adm-panel-customers" class="adm-panel hidden">
+            <h4>Registered Customers</h4>
+            <input id="adm-cust-search" type="search" placeholder="Search customer name, mobile or email..." style="margin-bottom:10px;width:100%;" />
+            <div id="admin-customers-list" class="request-list"></div>
+          </div>
+
+          <div id="adm-panel-menu" class="adm-panel hidden">
+            <h4>Editable Menu Categories</h4>
+            <div id="admin-categories-chips" class="chip-row"></div>
+            <form id="admin-add-category-form" class="inline-actions" style="margin-bottom:16px;">
+              <input id="adm-new-category" type="text" maxlength="50" placeholder="New Category Name" />
+              <button class="btn-gold" type="submit">Add Category</button>
+            </form>
+            <h4>Menu Availability, Stock &amp; Low-Stock Thresholds</h4>
+            <div class="chip-row" style="margin-bottom:10px;">
+              <button id="adm-stock-filter-all" type="button" class="cat-chip active">All Items</button>
+              <button id="adm-stock-filter-flagged" type="button" class="cat-chip">Low Stock Flagged (0)</button>
+            </div>
+            <div id="admin-menu-list" class="request-list"></div>
+          </div>
+
+          <div id="adm-panel-payment-shop" class="adm-panel hidden">
+            <h4>Payment Settings (Cash Only Default)</h4>
+            <form id="admin-payment-form" class="form-grid compact-grid" style="margin-bottom:16px;">
+              <label class="consent-row">
+                <input id="adm-cash-enabled" type="checkbox" checked />
+                <span>Cash Payment Enabled</span>
+              </label>
+              <label class="consent-row">
+                <input id="adm-upi-enabled" type="checkbox" />
+                <span>Enable Future UPI Payments</span>
+              </label>
+              <label>
+                <span>Owner UPI ID (used only if UPI enabled)</span>
+                <input id="adm-upi-id" type="text" placeholder="merchant@upi" />
+              </label>
+              <button class="btn-gold" type="submit">Save Payment Settings</button>
+            </form>
+
+            <h4>Shop Open / Closed &amp; Timings</h4>
+            <div class="inline-actions">
+              <button class="btn-gold" type="button" data-shop-mode="OPEN_NOW">OPEN NOW</button>
+              <button class="btn-outline-danger" type="button" data-shop-mode="CLOSED_NOW">CLOSED NOW</button>
+              <button class="btn-outline-gold" type="button" data-shop-mode="OPEN_AT_SCHEDULED">SCHEDULED</button>
+            </div>
+            <form id="admin-charges-form" class="form-grid compact-grid">
+              <label>
+                <span>Opening Time</span>
+                <input id="adm-open-time" type="text" value="7:00 AM" />
+              </label>
+              <label>
+                <span>Closing Time</span>
+                <input id="adm-close-time" type="text" value="10:00 PM" />
+              </label>
+              <label>
+                <span>Delivery Charge (₹)</span>
+                <input id="adm-deliv-charge" type="number" min="0" max="10000" value="0" />
+              </label>
+              <label>
+                <span>Packaging Charge (₹)</span>
+                <input id="adm-pkg-charge" type="number" min="0" max="10000" value="0" />
+              </label>
+              <button class="btn-gold" type="submit">Save Timings &amp; Charges</button>
+            </form>
+          </div>
+
+          <div id="adm-panel-design" class="adm-panel hidden">
+            <h4>Website &amp; App Design Studio</h4>
+            <div class="chip-row" id="design-presets-row">
+              <button type="button" class="cat-chip" data-preset="NAVY_ROYAL_GOLD">Navy + Royal Gold</button>
+              <button type="button" class="cat-chip" data-preset="WHITE_GOLD">White + Gold</button>
+              <button type="button" class="cat-chip" data-preset="PREMIUM_DARK">Premium Dark</button>
+              <button type="button" class="cat-chip" data-preset="CREAM_ROYAL_BLUE">Cream + Royal Blue</button>
+              <button type="button" class="cat-chip" data-preset="MODERN_ROYAL_PURPLE">Royal Purple</button>
+            </div>
+            <form id="admin-design-form" class="form-grid compact-grid">
+              <label>
+                <span>Primary Color</span>
+                <input id="adm-color-primary" type="color" value="#e5b94c" />
+              </label>
+              <label>
+                <span>Background Color</span>
+                <input id="adm-color-bg" type="color" value="#07122b" />
+              </label>
+              <label>
+                <span>Surface / Card Color</span>
+                <input id="adm-color-surface" type="color" value="#142652" />
+              </label>
+              <label>
+                <span>Accent Color</span>
+                <input id="adm-color-accent" type="color" value="#f7d774" />
+              </label>
+              <label>
+                <span>Text Color</span>
+                <input id="adm-color-text" type="color" value="#f8f6f0" />
+              </label>
+              <label>
+                <span>Font Style</span>
+                <select id="adm-font-style">
+                  <option value="DEVOTIONAL_SERIF">Devotional Royal</option>
+                  <option value="MODERN_SANS">Modern Clean</option>
+                  <option value="CLASSIC_ROYAL">Classic Bold</option>
+                </select>
+              </label>
+              <label>
+                <span>Hero Banner Image URL (Optional)</span>
+                <input id="adm-hero-url" type="url" placeholder="https://..." />
+              </label>
+              <label>
+                <span>Logo Image URL (Optional)</span>
+                <input id="adm-logo-url" type="url" placeholder="https://..." />
+              </label>
+              <label class="consent-row"><input id="adm-show-ann" type="checkbox" checked /><span>Show Announcements</span></label>
+              <label class="consent-row"><input id="adm-show-specials" type="checkbox" checked /><span>Show Daily Specials</span></label>
+              <label class="consent-row"><input id="adm-show-rooms" type="checkbox" checked /><span>Show Rooms Section</span></label>
+              <label class="consent-row"><input id="adm-show-delivery" type="checkbox" checked /><span>Show Delivery Section</span></label>
+            </form>
+            <div class="inline-actions" style="margin-top:12px;">
+              <button id="adm-save-draft-btn" class="btn-outline-gold" type="button">Save Draft</button>
+              <button id="adm-preview-theme-btn" class="btn-outline-gold" type="button">Toggle Live Preview</button>
+              <button id="adm-publish-theme-btn" class="btn-gold" type="button">Publish Theme</button>
+            </div>
+          </div>
+
+          <div id="adm-panel-reports" class="adm-panel hidden">
+            <h4>Sales &amp; Product Reports (IST)</h4>
+            <div class="chip-row" id="adm-report-periods">
+              <button type="button" class="cat-chip active" data-report-period="DAILY">Daily</button>
+              <button type="button" class="cat-chip" data-report-period="WEEKLY">Weekly</button>
+              <button type="button" class="cat-chip" data-report-period="MONTHLY">Monthly</button>
+              <button type="button" class="cat-chip" data-report-period="CUSTOM_RANGE">Custom Range</button>
+            </div>
+            <div class="card" style="margin-bottom:14px;">
+              <div class="inline-actions" style="align-items:flex-end;">
+                <label style="flex:1;min-width:160px;">
+                  <span>Start Date (IST)</span>
+                  <input id="adm-report-start" type="date" aria-label="Report start date" />
+                </label>
+                <label style="flex:1;min-width:160px;">
+                  <span>End Date (IST)</span>
+                  <input id="adm-report-end" type="date" aria-label="Report end date" />
+                </label>
+                <button id="adm-report-apply" class="btn-gold" type="button">Apply Range</button>
+                <button id="adm-report-reset" class="btn-outline-gold hidden" type="button">Reset</button>
+              </div>
+              <p id="adm-report-range-label" class="muted" style="margin:10px 0 0;"></p>
+            </div>
+            <div class="kpi-grid" id="adm-report-kpis"></div>
+            <h4>Product-wise Sales Breakdown</h4>
+            <div id="adm-report-products" class="request-list"></div>
+          </div>
+
+          <div id="adm-panel-security" class="adm-panel hidden">
+            <h4>Audit Activity Logs &amp; Security</h4>
+            <p class="muted" id="adm-security-session-info"></p>
+            <div id="admin-logs-list" class="request-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Digital Receipt Modal -->
+    <dialog id="receipt-dialog" class="receipt-dialog">
+      <div class="receipt-box">
+        <div class="receipt-top">
+          <h3>MARUTI DHAM — DIGITAL RECEIPT</h3>
+          <button id="close-receipt-btn" class="btn-outline-gold" type="button">Close</button>
+        </div>
+        <pre id="receipt-content" class="receipt-pre"></pre>
+        <div class="inline-actions">
+          <button id="copy-receipt-btn" class="btn-outline-gold" type="button">Copy Receipt</button>
+          <button id="print-receipt-btn" class="btn-gold" type="button">Print / Save PDF</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+    <!-- Scroll to Top Indicator (shown when scrolled down on long pages) -->
+    <button id="scroll-to-top-btn" class="scroll-top-btn hidden" type="button" aria-label="Scroll to top" title="Scroll to top">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"></polyline></svg>
+      <span>Top</span>
+    </button>
+
+    <!-- Strictly 5 Bottom Navigation Tabs -->
+    <nav class="bottom-nav" aria-label="Primary Navigation">
+      <button id="nav-home" class="nav-item active" type="button" data-tab="home" aria-current="page">
+        <span class="nav-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5"></path><path d="M5 9.5V20h5v-5h4v5h5V9.5"></path></svg>
+        </span>
+        <span class="nav-label">Home</span>
+      </button>
+      <button id="nav-food" class="nav-item" type="button" data-tab="food">
+        <span class="nav-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v7a3 3 0 0 0 6 0V3"></path><path d="M7 3v18"></path><path d="M16 3v18"></path><path d="M16 3c2.5 0 4 2.5 4 6s-1.5 5-4 5"></path></svg>
+        </span>
+        <span class="nav-label">Food Order</span>
+      </button>
+      <button id="nav-rooms" class="nav-item" type="button" data-tab="rooms">
+        <span class="nav-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18V7"></path><path d="M3 14h18v4"></path><path d="M7 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"></path><path d="M11 14V9h7a3 3 0 0 1 3 3v2"></path></svg>
+        </span>
+        <span class="nav-label">Rooms &amp; Freshen Up</span>
+      </button>
+      <button id="nav-delivery" class="nav-item" type="button" data-tab="delivery">
+        <span class="nav-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle><path d="M9 17.5h6"></path><path d="M4 17.5H2V11l3-4h6v10.5"></path><path d="M11 9h6l3 4.5v4h-2.5"></path></svg>
+        </span>
+        <span class="nav-label">Food Delivery</span>
+      </button>
+      <button id="nav-settings" class="nav-item" type="button" data-tab="settings">
+        <span id="nav-settings-badge" class="nav-badge hidden" aria-label="New pending orders">0</span>
+        <span class="nav-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </span>
+        <span class="nav-label">Settings</span>
+      </button>
+    </nav>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,521 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitive Helpers ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function isValidPhoneKey(phoneKey) {
+      return phoneKey is string && phoneKey.size() >= 10 && phoneKey.size() <= 15 && phoneKey.matches('^[0-9]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'tarunkumarjoshi11@gmail.com' && request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // --- Entity Validation Helpers ---
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 20)) &&
+             data.preferredLanguage in ['en', 'hi'] &&
+             (!('registrationCompleted' in data) || data.registrationCompleted is bool) &&
+             (!('preferredFulfillment' in data) || data.preferredFulfillment in ['PICKUP', 'DELIVERY']) &&
+             (!('defaultAddress' in data) || (data.defaultAddress is string && data.defaultAddress.size() <= 300)) &&
+             (!('defaultLocality' in data) || (data.defaultLocality is string && data.defaultLocality.size() <= 100)) &&
+             (!('consentAccepted' in data) || data.consentAccepted is bool) &&
+             (!('deletionRequested' in data) || data.deletionRequested is bool) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPhoneRegistry(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidOrderCounter(data) {
+      return data.lastNumber is int && data.lastNumber >= 1 && data.lastNumber <= 100000000 &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAdminUser(data) {
+      return data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 120 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidShopSettings(data) {
+      return data.shopName is string && data.shopName.size() >= 1 && data.shopName.size() <= 100 &&
+             (!('ownerName' in data) || (data.ownerName is string && data.ownerName.size() <= 80)) &&
+             data.address is string && data.address.size() >= 1 && data.address.size() <= 300 &&
+             data.mapsQuery is string && data.mapsQuery.size() >= 1 && data.mapsQuery.size() <= 300 &&
+             data.shopOpen is bool &&
+             (!('shopControlMode' in data) || data.shopControlMode in ['OPEN_NOW', 'CLOSED_NOW', 'OPEN_AT_SCHEDULED', 'CLOSE_AT_SCHEDULED']) &&
+             data.openingTime is string && data.openingTime.size() <= 40 &&
+             data.closingTime is string && data.closingTime.size() <= 40 &&
+             data.whatsappNumber is string && data.whatsappNumber.size() <= 25 &&
+             data.contactPhone is string && data.contactPhone.size() <= 25 &&
+             data.contactEmail is string && data.contactEmail.size() <= 120 &&
+             (!('upiId' in data) || (data.upiId is string && data.upiId.size() <= 120)) &&
+             (!('cashEnabled' in data) || data.cashEnabled is bool) &&
+             (!('upiEnabled' in data) || data.upiEnabled is bool) &&
+             (!('whatsappWebhookUrl' in data) || (data.whatsappWebhookUrl is string && data.whatsappWebhookUrl.size() <= 500)) &&
+             data.aboutText is string && data.aboutText.size() <= 2000 &&
+             data.privacyPolicy is string && data.privacyPolicy.size() <= 3000 &&
+             data.termsText is string && data.termsText.size() <= 3000 &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidThemeMap(t) {
+      return t is map &&
+             t.preset is string && t.preset.size() >= 1 && t.preset.size() <= 40 &&
+             t.primaryColorHex is string && t.primaryColorHex.size() >= 4 && t.primaryColorHex.size() <= 12 &&
+             t.backgroundColorHex is string && t.backgroundColorHex.size() >= 4 && t.backgroundColorHex.size() <= 12 &&
+             t.surfaceColorHex is string && t.surfaceColorHex.size() >= 4 && t.surfaceColorHex.size() <= 12 &&
+             t.accentColorHex is string && t.accentColorHex.size() >= 4 && t.accentColorHex.size() <= 12 &&
+             t.textColorHex is string && t.textColorHex.size() >= 4 && t.textColorHex.size() <= 12 &&
+             (!('fontStyle' in t) || (t.fontStyle is string && t.fontStyle.size() <= 30)) &&
+             (!('layoutVariant' in t) || (t.layoutVariant is string && t.layoutVariant.size() <= 30));
+    }
+
+    function isValidSiteConfig(data) {
+      return data.publishedTheme is map && isValidThemeMap(data.publishedTheme) &&
+             data.draftTheme is map && isValidThemeMap(data.draftTheme) &&
+             (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() <= 2000)) &&
+             (!('heroBannerUrl' in data) || (data.heroBannerUrl is string && data.heroBannerUrl.size() <= 2000)) &&
+             (!('heroTitle' in data) || (data.heroTitle is string && data.heroTitle.size() <= 120)) &&
+             (!('heroSubtitle' in data) || (data.heroSubtitle is string && data.heroSubtitle.size() <= 240)) &&
+             data.showAnnouncementsSection is bool &&
+             data.showDailySpecialsSection is bool &&
+             data.showRoomsSection is bool &&
+             data.showDeliverySection is bool &&
+             data.categories is list && data.categories.size() >= 1 && data.categories.size() <= 20 &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAnnouncement(data) {
+      return data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+             data.message is string && data.message.size() >= 1 && data.message.size() <= 500 &&
+             data.active is bool &&
+             data.dailySpecial is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidProduct(data) {
+      return data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             data.nameHindi is string && data.nameHindi.size() <= 80 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 240)) &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 50 &&
+             data.priceOptions is list && data.priceOptions.size() >= 1 && data.priceOptions.size() <= 5 &&
+             data.priceOptions[0] is map &&
+             data.imageUrl is string && data.imageUrl.size() <= 2000 &&
+             data.localImageKey is string && data.localImageKey.size() <= 50 &&
+             data.available is bool &&
+             data.visible is bool &&
+             data.foodOrderEnabled is bool &&
+             data.deliveryEnabled is bool &&
+             (!('stockQuantity' in data) || (data.stockQuantity is int && data.stockQuantity >= 0 && data.stockQuantity <= 100000)) &&
+             (!('lowStockThreshold' in data) || (data.lowStockThreshold is int && data.lowStockThreshold >= 0 && data.lowStockThreshold <= 10000)) &&
+             (!('trackStock' in data) || data.trackStock is bool) &&
+             data.sortOrder is int && data.sortOrder >= 0 && data.sortOrder <= 10000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidRoomConfig(data) {
+      return data.roomType in ['AC', 'NON_AC'] &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 80 &&
+             data.titleHindi is string && data.titleHindi.size() <= 80 &&
+             data.available is bool &&
+             data.statusLabel in ['AVAILABLE', 'FULLY_BOOKED', 'CLOSED'] &&
+             data.availableCount is int && data.availableCount >= 0 && data.availableCount <= 500 &&
+             data.imageUrl is string && data.imageUrl.size() <= 2000 &&
+             data.rate6Hours is int && data.rate6Hours >= 0 && data.rate6Hours <= 100000 &&
+             data.rate12Hours is int && data.rate12Hours >= 0 && data.rate12Hours <= 100000 &&
+             (!('rate1Hour' in data) || (data.rate1Hour is int && data.rate1Hour >= 0 && data.rate1Hour <= 100000)) &&
+             (!('rate2Hours' in data) || (data.rate2Hours is int && data.rate2Hours >= 0 && data.rate2Hours <= 100000)) &&
+             (!('rate3Hours' in data) || (data.rate3Hours is int && data.rate3Hours >= 0 && data.rate3Hours <= 100000)) &&
+             (!('rate4Hours' in data) || (data.rate4Hours is int && data.rate4Hours >= 0 && data.rate4Hours <= 100000)) &&
+             (!('rate5Hours' in data) || (data.rate5Hours is int && data.rate5Hours >= 0 && data.rate5Hours <= 100000)) &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidFreshenUpConfig(data) {
+      return data.optionKey in ['ONLY_FRESH', 'BATH_FRESH'] &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+             data.titleHindi is string && data.titleHindi.size() <= 100 &&
+             data.pricePerPerson is int && data.pricePerPerson >= 0 && data.pricePerPerson <= 10000 &&
+             data.available is bool &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidDeliverySettings(data) {
+      return data.deliveryEnabled is bool &&
+             (!('pickupEnabled' in data) || data.pickupEnabled is bool) &&
+             (!('deliveryCharge' in data) || (data.deliveryCharge is int && data.deliveryCharge >= 0 && data.deliveryCharge <= 10000)) &&
+             (!('packagingCharge' in data) || (data.packagingCharge is int && data.packagingCharge >= 0 && data.packagingCharge <= 10000)) &&
+             data.serviceAreaName is string && data.serviceAreaName.size() >= 1 && data.serviceAreaName.size() <= 100 &&
+             data.allowedLocalities is list && data.allowedLocalities.size() >= 1 && data.allowedLocalities.size() <= 30 &&
+             data.allowedLocalities[0] is string &&
+             data.minimumOrderAmount is int && data.minimumOrderAmount >= 0 && data.minimumOrderAmount <= 100000 &&
+             data.deliveryNote is string && data.deliveryNote.size() <= 300 &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidOwnerPrivateSettings(data) {
+      return data.ownerWhatsAppNumber is string && data.ownerWhatsAppNumber.size() <= 25 &&
+             data.whatsappWebhookUrl is string && data.whatsappWebhookUrl.size() <= 500 &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidActivityLogEntry(data) {
+      return data.action is string && data.action.size() >= 1 && data.action.size() <= 120 &&
+             data.targetType is string && data.targetType.size() >= 1 && data.targetType.size() <= 60 &&
+             data.targetId is string && data.targetId.size() <= 120 &&
+             data.previousValue is string && data.previousValue.size() <= 400 &&
+             data.newValue is string && data.newValue.size() <= 400 &&
+             data.performedByEmail is string && data.performedByEmail.size() <= 120 &&
+             data.performedByUid is string && data.performedByUid.size() >= 1 && data.performedByUid.size() <= 128 &&
+             data.viaAi is bool &&
+             data.istTimestampText is string && data.istTimestampText.size() >= 1 && data.istTimestampText.size() <= 80 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidCustomerRequest(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             (!('orderNumber' in data) || (data.orderNumber is string && data.orderNumber.size() >= 3 && data.orderNumber.size() <= 32)) &&
+             data.category in ['FOOD_REQUEST', 'ROOM_REQUEST', 'FRESHEN_UP_REQUEST', 'FOOD_DELIVERY_REQUEST'] &&
+             data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 80 &&
+             data.contactPhone is string && data.contactPhone.size() >= 5 && data.contactPhone.size() <= 25 &&
+             (!('customerEmail' in data) || (data.customerEmail is string && data.customerEmail.size() <= 120)) &&
+             data.items is list && data.items.size() <= 30 &&
+             (data.items.size() == 0 || data.items[0] is map) &&
+             data.foodTotal is int && data.foodTotal >= 0 && data.foodTotal <= 1000000 &&
+             data.roomTotal is int && data.roomTotal >= 0 && data.roomTotal <= 1000000 &&
+             data.freshenUpTotal is int && data.freshenUpTotal >= 0 && data.freshenUpTotal <= 1000000 &&
+             (!('deliveryCharge' in data) || (data.deliveryCharge is int && data.deliveryCharge >= 0 && data.deliveryCharge <= 10000)) &&
+             (!('packagingCharge' in data) || (data.packagingCharge is int && data.packagingCharge >= 0 && data.packagingCharge <= 10000)) &&
+             data.grandTotal is int && data.grandTotal >= 0 && data.grandTotal <= 3000000 &&
+             data.grandTotal == (
+               data.foodTotal +
+               data.roomTotal +
+               data.freshenUpTotal +
+               (('deliveryCharge' in data) ? data.deliveryCharge : 0) +
+               (('packagingCharge' in data) ? data.packagingCharge : 0)
+             ) &&
+             data.expectedTime is string && data.expectedTime.size() >= 1 && data.expectedTime.size() <= 60 &&
+             (!('fulfillmentType' in data) || data.fulfillmentType in ['PICKUP', 'DELIVERY']) &&
+             (!('paymentMethod' in data) || data.paymentMethod in ['CASH', 'UPI']) &&
+             (!('paymentStatus' in data) || data.paymentStatus in ['UNPAID', 'UPI_PENDING_VERIFICATION', 'PAID', 'REFUNDED']) &&
+             (!('upiTransactionRef' in data) || (data.upiTransactionRef is string && data.upiTransactionRef.size() <= 80)) &&
+             (!('whatsappStatus' in data) || data.whatsappStatus in ['PENDING_SERVER', 'SENT', 'FAILED', 'MANUAL_SHARED', 'NOT_CONFIGURED']) &&
+             (!('whatsappError' in data) || (data.whatsappError is string && data.whatsappError.size() <= 400)) &&
+             (!('whatsappRetryCount' in data) || (data.whatsappRetryCount is int && data.whatsappRetryCount >= 0 && data.whatsappRetryCount <= 100)) &&
+             (!('roomType' in data) || data.roomType in ['AC', 'NON_AC']) &&
+             (!('numberOfRooms' in data) || (data.numberOfRooms is int && data.numberOfRooms >= 1 && data.numberOfRooms <= 50)) &&
+             (!('numberOfPeople' in data) || (data.numberOfPeople is int && data.numberOfPeople >= 1 && data.numberOfPeople <= 100)) &&
+             (!('roomDurationHours' in data) || data.roomDurationHours in [1, 2, 3, 4, 5, 6, 12]) &&
+             (!('roomRateConfigured' in data) || data.roomRateConfigured is bool) &&
+             (!('freshenUpOption' in data) || data.freshenUpOption in ['ONLY_FRESH', 'BATH_FRESH']) &&
+             (!('deliveryAddress' in data) || (data.deliveryAddress is string && data.deliveryAddress.size() <= 300)) &&
+             (!('deliveryLocality' in data) || (data.deliveryLocality is string && data.deliveryLocality.size() <= 100)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 300)) &&
+             data.status in ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'COMPLETED', 'REJECTED'] &&
+             (!('adminNote' in data) || (data.adminNote is string && data.adminNote.size() <= 300)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // --- Collection Rules ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'preferredLanguage', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'email', 'phone', 'preferredLanguage', 'registrationCompleted', 'preferredFulfillment', 'defaultAddress', 'defaultLocality', 'consentAccepted', 'deletionRequested', 'createdAt', 'updatedAt']) &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'phone', 'preferredLanguage', 'registrationCompleted', 'preferredFulfillment', 'defaultAddress', 'defaultLocality', 'consentAccepted', 'deletionRequested', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /phone_registry/{phoneKey} {
+      allow get: if isSignedIn() && isValidPhoneKey(phoneKey);
+      allow list: if false;
+      allow create: if isSignedIn() &&
+                       isValidPhoneKey(phoneKey) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'createdAt']) &&
+                       incoming().keys().hasOnly(['userId', 'createdAt']) &&
+                       isValidPhoneRegistry(incoming());
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidPhoneKey(phoneKey) && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /counters/{counterId} {
+      allow get: if isSignedIn() && counterId == 'orders';
+      allow list: if false;
+      allow create: if isSignedIn() &&
+                       counterId == 'orders' &&
+                       incoming().keys().hasAll(['lastNumber', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['lastNumber', 'updatedAt']) &&
+                       incoming().lastNumber == 1 &&
+                       isValidOrderCounter(incoming());
+      allow update: if isSignedIn() &&
+                       counterId == 'orders' &&
+                       incoming().keys().hasAll(['lastNumber', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['lastNumber', 'updatedAt']) &&
+                       incoming().lastNumber == existing().lastNumber + 1 &&
+                       isValidOrderCounter(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && isValidId(adminUid) && (request.auth.uid == adminUid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() &&
+                       isValidId(adminUid) &&
+                       adminUid == request.auth.uid &&
+                       incoming().uid == adminUid &&
+                       incoming().email == 'tarunkumarjoshi11@gmail.com' &&
+                       request.auth.token.email == 'tarunkumarjoshi11@gmail.com' &&
+                       request.auth.token.email_verified == true &&
+                       incoming().keys().hasAll(['uid', 'email', 'createdAt']) &&
+                       incoming().keys().hasOnly(['uid', 'email', 'createdAt']) &&
+                       isValidAdminUser(incoming());
+      allow update: if isSignedIn() &&
+                       isValidId(adminUid) &&
+                       adminUid == request.auth.uid &&
+                       incoming().uid == existing().uid &&
+                       incoming().email == 'tarunkumarjoshi11@gmail.com' &&
+                       request.auth.token.email == 'tarunkumarjoshi11@gmail.com' &&
+                       request.auth.token.email_verified == true &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidAdminUser(incoming());
+      allow delete: if isSignedIn() && isValidId(adminUid) && isAdmin();
+    }
+
+    match /shop_settings/{settingId} {
+      allow get: if isSignedIn() && isValidId(settingId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       isValidId(settingId) &&
+                       incoming().keys().hasAll(['shopName', 'address', 'mapsQuery', 'shopOpen', 'openingTime', 'closingTime', 'whatsappNumber', 'contactPhone', 'contactEmail', 'aboutText', 'privacyPolicy', 'termsText', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['shopName', 'ownerName', 'address', 'mapsQuery', 'shopOpen', 'shopControlMode', 'openingTime', 'closingTime', 'whatsappNumber', 'contactPhone', 'contactEmail', 'upiId', 'cashEnabled', 'upiEnabled', 'whatsappWebhookUrl', 'aboutText', 'privacyPolicy', 'termsText', 'updatedAt']) &&
+                       isValidShopSettings(incoming()) &&
+                       isAdmin();
+      allow update: if isSignedIn() &&
+                       isValidId(settingId) &&
+                       isValidShopSettings(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['shopName', 'ownerName', 'address', 'mapsQuery', 'shopOpen', 'shopControlMode', 'openingTime', 'closingTime', 'whatsappNumber', 'contactPhone', 'contactEmail', 'upiId', 'cashEnabled', 'upiEnabled', 'whatsappWebhookUrl', 'aboutText', 'privacyPolicy', 'termsText', 'updatedAt']) &&
+                       isAdmin();
+      allow delete: if isSignedIn() && isValidId(settingId) && isAdmin();
+    }
+
+    match /site_config/{configId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin() &&
+                       isValidId(configId) &&
+                       incoming().keys().hasAll(['showAnnouncementsSection', 'showDailySpecialsSection', 'showRoomsSection', 'showDeliverySection', 'categories', 'draftTheme', 'publishedTheme', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['logoUrl', 'heroBannerUrl', 'heroTitle', 'heroSubtitle', 'showAnnouncementsSection', 'showDailySpecialsSection', 'showRoomsSection', 'showDeliverySection', 'categories', 'draftTheme', 'publishedTheme', 'updatedAt']) &&
+                       isValidSiteConfig(incoming());
+      allow update: if isAdmin() &&
+                       isValidId(configId) &&
+                       isValidSiteConfig(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['logoUrl', 'heroBannerUrl', 'heroTitle', 'heroSubtitle', 'showAnnouncementsSection', 'showDailySpecialsSection', 'showRoomsSection', 'showDeliverySection', 'categories', 'draftTheme', 'publishedTheme', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(configId);
+    }
+
+    match /announcements/{announcementId} {
+      allow get: if isSignedIn() && isValidId(announcementId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       isValidId(announcementId) &&
+                       incoming().keys().hasAll(['title', 'message', 'active', 'dailySpecial', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['title', 'message', 'active', 'dailySpecial', 'createdAt', 'updatedAt']) &&
+                       isValidAnnouncement(incoming()) &&
+                       isAdmin();
+      allow update: if isSignedIn() &&
+                       isValidId(announcementId) &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidAnnouncement(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['title', 'message', 'active', 'dailySpecial', 'updatedAt']) &&
+                       isAdmin();
+      allow delete: if isSignedIn() && isValidId(announcementId) && isAdmin();
+    }
+
+    match /products/{productId} {
+      allow get: if isSignedIn() && isValidId(productId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       isValidId(productId) &&
+                       incoming().keys().hasAll(['name', 'nameHindi', 'category', 'priceOptions', 'imageUrl', 'localImageKey', 'available', 'visible', 'foodOrderEnabled', 'deliveryEnabled', 'sortOrder', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['name', 'nameHindi', 'description', 'category', 'priceOptions', 'imageUrl', 'localImageKey', 'available', 'visible', 'foodOrderEnabled', 'deliveryEnabled', 'stockQuantity', 'lowStockThreshold', 'trackStock', 'sortOrder', 'createdAt', 'updatedAt']) &&
+                       isValidProduct(incoming()) &&
+                       isAdmin();
+      allow update: if isSignedIn() &&
+                       isValidId(productId) &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidProduct(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'nameHindi', 'description', 'category', 'priceOptions', 'imageUrl', 'localImageKey', 'available', 'visible', 'foodOrderEnabled', 'deliveryEnabled', 'stockQuantity', 'lowStockThreshold', 'trackStock', 'sortOrder', 'updatedAt']) &&
+                       isAdmin();
+      allow delete: if isSignedIn() && isValidId(productId) && isAdmin();
+    }
+
+    match /room_configs/{roomTypeId} {
+      allow get: if isSignedIn() && isValidId(roomTypeId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       isValidId(roomTypeId) &&
+                       incoming().keys().hasAll(['roomType', 'title', 'titleHindi', 'available', 'statusLabel', 'availableCount', 'imageUrl', 'rate6Hours', 'rate12Hours', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['roomType', 'title', 'titleHindi', 'available', 'statusLabel', 'availableCount', 'imageUrl', 'rate6Hours', 'rate12Hours', 'rate1Hour', 'rate2Hours', 'rate3Hours', 'rate4Hours', 'rate5Hours', 'updatedAt']) &&
+                       isValidRoomConfig(incoming()) &&
+                       isAdmin();
+      allow update: if isSignedIn() &&
+                       isValidId(roomTypeId) &&
+                       incoming().roomType == existing().roomType &&
+                       isValidRoomConfig(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['title', 'titleHindi', 'available', 'statusLabel', 'availableCount', 'imageUrl', 'rate6Hours', 'rate12Hours', 'rate1Hour', 'rate2Hours', 'rate3Hours', 'rate4Hours', 'rate5Hours', 'updatedAt']) &&
+                       isAdmin();
+      allow delete: if isSignedIn() && isValidId(roomTypeId) && isAdmin();
+    }
+
+    match /freshen_up_configs/{optionId} {
+      allow get: if isSignedIn() && isValidId(optionId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       isValidId(optionId) &&
+                       incoming().keys().hasAll(['optionKey', 'title', 'titleHindi', 'pricePerPerson', 'available', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['optionKey', 'title', 'titleHindi', 'pricePerPerson', 'available', 'updatedAt']) &&
+                       isValidFreshenUpConfig(incoming()) &&
+                       isAdmin();
+      allow update: if isSignedIn() &&
+                       isValidId(optionId) &&
+                       incoming().optionKey == existing().optionKey &&
+                       isValidFreshenUpConfig(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['title', 'titleHindi', 'pricePerPerson', 'available', 'updatedAt']) &&
+                       isAdmin();
+      allow delete: if isSignedIn() && isValidId(optionId) && isAdmin();
+    }
+
+    match /delivery_settings/{settingId} {
+      allow get: if isSignedIn() && isValidId(settingId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() &&
+                       isValidId(settingId) &&
+                       incoming().keys().hasAll(['deliveryEnabled', 'serviceAreaName', 'allowedLocalities', 'minimumOrderAmount', 'deliveryNote', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['deliveryEnabled', 'pickupEnabled', 'deliveryCharge', 'packagingCharge', 'serviceAreaName', 'allowedLocalities', 'minimumOrderAmount', 'deliveryNote', 'updatedAt']) &&
+                       isValidDeliverySettings(incoming()) &&
+                       isAdmin();
+      allow update: if isSignedIn() &&
+                       isValidId(settingId) &&
+                       isValidDeliverySettings(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['deliveryEnabled', 'pickupEnabled', 'deliveryCharge', 'packagingCharge', 'serviceAreaName', 'allowedLocalities', 'minimumOrderAmount', 'deliveryNote', 'updatedAt']) &&
+                       isAdmin();
+      allow delete: if isSignedIn() && isValidId(settingId) && isAdmin();
+    }
+
+    match /owner_private_settings/{settingId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin() &&
+                       isValidId(settingId) &&
+                       incoming().keys().hasAll(['ownerWhatsAppNumber', 'whatsappWebhookUrl', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['ownerWhatsAppNumber', 'whatsappWebhookUrl', 'updatedAt']) &&
+                       isValidOwnerPrivateSettings(incoming());
+      allow update: if isAdmin() &&
+                       isValidId(settingId) &&
+                       isValidOwnerPrivateSettings(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['ownerWhatsAppNumber', 'whatsappWebhookUrl', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(settingId);
+    }
+
+    match /activity_logs/{logId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin() &&
+                       isValidId(logId) &&
+                       incoming().performedByUid == request.auth.uid &&
+                       incoming().keys().hasAll(['action', 'targetType', 'targetId', 'previousValue', 'newValue', 'performedByEmail', 'performedByUid', 'viaAi', 'istTimestampText', 'createdAt']) &&
+                       incoming().keys().hasOnly(['action', 'targetType', 'targetId', 'previousValue', 'newValue', 'performedByEmail', 'performedByUid', 'viaAi', 'istTimestampText', 'createdAt']) &&
+                       isValidActivityLogEntry(incoming());
+      allow update, delete: if false;
+    }
+
+    match /notifications/{notifId} {
+      allow get, list: if isAdmin();
+      allow update: if isAdmin() &&
+                       isValidId(notifId) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['read']) &&
+                       incoming().read is bool;
+      allow create, delete: if false;
+    }
+
+    match /requests/{requestId} {
+      allow get: if isSignedIn() && isValidId(requestId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'PENDING' &&
+                       (!('paymentMethod' in incoming()) ||
+                         incoming().paymentMethod == 'CASH' ||
+                         (incoming().paymentMethod == 'UPI' &&
+                          exists(/databases/$(database)/documents/shop_settings/main) &&
+                          get(/databases/$(database)/documents/shop_settings/main).data.upiEnabled == true)) &&
+                       (!('paymentStatus' in incoming()) || incoming().paymentStatus in ['UNPAID', 'UPI_PENDING_VERIFICATION']) &&
+                       (!('whatsappStatus' in incoming()) || incoming().whatsappStatus in ['PENDING_SERVER', 'NOT_CONFIGURED']) &&
+                       !('adminNote' in incoming()) &&
+                       !('whatsappError' in incoming()) &&
+                       incoming().keys().hasAll(['userId', 'category', 'customerName', 'contactPhone', 'items', 'foodTotal', 'roomTotal', 'freshenUpTotal', 'grandTotal', 'expectedTime', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'orderNumber', 'category', 'customerName', 'contactPhone', 'customerEmail', 'items', 'foodTotal', 'roomTotal', 'freshenUpTotal', 'deliveryCharge', 'packagingCharge', 'grandTotal', 'expectedTime', 'fulfillmentType', 'paymentMethod', 'paymentStatus', 'upiTransactionRef', 'whatsappStatus', 'whatsappRetryCount', 'roomType', 'numberOfRooms', 'numberOfPeople', 'roomDurationHours', 'roomRateConfigured', 'freshenUpOption', 'deliveryAddress', 'deliveryLocality', 'notes', 'status', 'createdAt', 'updatedAt']) &&
+                       isValidCustomerRequest(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().category == existing().category &&
+                       isValidCustomerRequest(incoming()) && (
+                         (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'paymentStatus', 'whatsappStatus', 'whatsappError', 'whatsappRetryCount', 'adminNote', 'updatedAt'])) ||
+                         (existing().userId == request.auth.uid &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['whatsappStatus', 'updatedAt']) &&
+                          incoming().whatsappStatus == 'MANUAL_SHARED')
+                       );
+
+      allow delete: if isSignedIn() && isValidId(requestId) && isAdmin();
+    }
+  }
+}

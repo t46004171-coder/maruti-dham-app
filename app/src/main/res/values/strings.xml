@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Maruti Dham</string>
+    <string name="khatu_shyam_greeting">Jai Shri Shyam</string>
+    <string name="shop_address_default">Near Manda Chauraha, Khatu Shyam Ji, Sikar, Rajasthan, India</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_food_order">Food Order</string>
+    <string name="nav_rooms_freshen_up">Rooms &amp; Freshen Up</string>
+    <string name="nav_food_delivery">Food Delivery</string>
+    <string name="nav_settings">Settings</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+</resources>
